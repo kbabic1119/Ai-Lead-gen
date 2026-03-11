@@ -78,7 +78,7 @@ export const findLinkedInLeads = async (filters: { industry?: string; jobTitle?:
   Return a list of businesses with their owner's name, role, LinkedIn profile URL, website URL, email contact, and company size if possible.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }]
@@ -86,7 +86,7 @@ export const findLinkedInLeads = async (filters: { industry?: string; jobTitle?:
   });
   
   const structuredResponse = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     contents: `Extract a list of business leads from the following search results:
     ${response.text}
     
@@ -170,7 +170,7 @@ export const analyzeWebsite = async (businessName: string, websiteUrl: string) =
   const analysisPromise = retryWithBackoff(async () => {
     console.log("Calling ai.models.generateContent...");
     const result = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: `Analyze the website for "${businessName}" at ${formattedUrl}. 
       Identify 3-5 specific issues that suggest they need a redesign (e.g., poor mobile responsiveness, outdated design, slow loading, lack of clear CTA, missing modern features).
       Additionally, provide 3-5 specific, actionable SEO improvements (e.g., meta tags, keyword optimization, site structure, speed optimization).
@@ -197,7 +197,7 @@ export const analyzeWebsite = async (businessName: string, websiteUrl: string) =
 export const generatePitch = async (businessName: string, analysis: string) => {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     contents: `Write a highly personalized, natural-sounding cold email to the owner of "${businessName}".
     
     ABOUT ME:
@@ -225,7 +225,7 @@ export const generatePitch = async (businessName: string, analysis: string) => {
 export const reframePitch = async (businessName: string, currentPitch: string, feedback: string) => {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     contents: `Reframe this cold email pitch for "${businessName}".
     
     CURRENT PITCH:
