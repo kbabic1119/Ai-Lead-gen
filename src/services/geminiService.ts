@@ -25,43 +25,59 @@ export interface BusinessLead {
   email?: string;
 }
 
-export const findLeads = async (query: string, location?: { lat: number; lng: number }): Promise<BusinessLead[]> => {
+export const findLeads = async (query: string): Promise<BusinessLead[]> => {
   const ai = getAI();
-  const response = await ai.models.generateContent({
+
+  const searchResponse = await ai.models.generateContent({
     model: "gemini-2.5-flash",
-    contents: `Find businesses for: ${query}. 
-    For each business, provide its name, address, phone number, rating, and website if available.
-    Focus on businesses that might need a website redesign.`,
+    contents: `Search for real local businesses matching: "${query}".
+    For each business find: business name, full address, phone number, website URL, and Google rating if available.
+    Return exactly 5 real businesses that likely need a website redesign (outdated or no website).`,
     config: {
-      tools: [{ googleMaps: {} }],
-      toolConfig: {
-        retrievalConfig: location ? {
-          latLng: {
-            latitude: location.lat,
-            longitude: location.lng
-          }
-        } : undefined
-      }
-    },
+      tools: [{ googleSearch: {} }]
+    }
   });
 
-  const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-  const leads: BusinessLead[] = [];
-  
-  if (chunks) {
-    chunks.forEach((chunk: any) => {
-      if (chunk.maps && leads.length < 5) {
-        leads.push({
-          id: chunk.maps.uri || Math.random().toString(36).substr(2, 9),
-          name: chunk.maps.title || "Unknown Business",
-          website: chunk.maps.uri,
-          source: 'maps'
-        });
-      }
-    });
-  }
+  const structuredResponse = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: `Extract business leads from the following search results:
+    ${searchResponse.text}
 
-  return leads;
+    Format as a JSON array of exactly 5 objects with: name, address, phone, website, rating (number or null).`,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            address: { type: Type.STRING },
+            phone: { type: Type.STRING },
+            website: { type: Type.STRING },
+            rating: { type: Type.NUMBER }
+          },
+          required: ["name"]
+        }
+      }
+    }
+  });
+
+  try {
+    const data = JSON.parse(structuredResponse.text);
+    return data.map((item: any) => ({
+      id: item.website || Math.random().toString(36).substr(2, 9),
+      name: item.name,
+      address: item.address,
+      phone: item.phone,
+      website: item.website,
+      rating: item.rating,
+      source: 'maps' as const
+    }));
+  } catch (e) {
+    console.error("Failed to parse leads", e);
+    return [];
+  }
 };
 
 export const findLinkedInLeads = async (filters: { industry?: string; jobTitle?: string; location?: string }): Promise<BusinessLead[]> => {
